@@ -10,7 +10,7 @@ L|7||
 -L-J|
 L|-JF""" 
 
-Ab="""FF--7-|7F--7F--|7F77-.FJF7F-7-F|7.77.FF7-F7---7-FJ7.|J--FJJ-FF-.JJ7LF7.J7F-7-F77L7.7-7.7FF77FF7..F--L7JF--.FF.7F|JFL7.7FL77.-7|7.F7-7FJ.FJ.-
+A="""FF--7-|7F--7F--|7F77-.FJF7F-7-F|7.77.FF7-F7---7-FJ7.|J--FJJ-FF-.JJ7LF7.J7F-7-F77L7.7-7.7FF77FF7..F--L7JF--.FF.7F|JFL7.7FL77.-7|7.F7-7FJ.FJ.-
 FL-JF-L-JJFFJJ.7-JLL.7JF-J---7JLF7|LLF--.LJ.F7.LJL7--JJLJJJ.||JF|.F7LJ7.JJL7-FJ7L|-JL..LJJF-FJJ-|7|||F.|7.F-J7|FJF-JF--7L|7L---7-FL7FJ-FJ7.|
 F7.||.7--7-LJ.FJ.|7..J-J7J|F.LFFJ7F7J|LJFL7.FJ7.|FJ..J|.|.F-LL-7..|F|J|7.FF77|F77J.F-JJ-J-|-|7JLL7-FJLFLF-7J.LJ7--7-7-L|JL-J7J7L..L-J|L|-FF7
 ||F||FL7F7-|7|LF7|F|7|7|F7|..FJ|FJFJ.L--.FL.F.LF7J|FF.L7FLJ|.|7FJ-LJ|.|FL||.LF7JF.F||7JF--L-|7F7.-..L.7||..L7FL7|JL7L7-L77L|F-7J.7F|FL77.LL7
@@ -151,7 +151,7 @@ L-|.|7LJF|F|-FF7FFJJ|J.L--FJJ.||FJ|LJ|LJ||7-LJLJ.JLJ7-LL7|LL7|J-FJ|LLJLJFLJL7F7F
 |JJ|LL7JF--LJ7LF7|L|||JJ|-7J|7L.LJ-7.-7FL-LJ-7JJ.LFJ.LL-|FF|LJF---JF-7.7JJ..7-.J-FL|J-J.FJ--7JJ-7||-JJ---L|.LJ|.F|L77J||LJ.FL--J.FJLF7.|F7FF
 L|L|.LLL-JL|.|-777-L77J.L-LL|7L|.L7J-L.FL-J.LJL7J-7J-L.LL-77.7-JFJL--|7L|J.--J.LJL-JJ.F7LJ.LJ.L----JLJJ.FJ|...7J-L-L7L|-7L7-LFJJ-|J--|7JLL-L""" 
 
-A="""...........
+Ab="""...........
 .S-------7.
 .|F-----7|.
 .||.....||.
@@ -161,7 +161,7 @@ A="""...........
 .L--J.L--J.
 ..........."""
 
-A=""".F----7F7F7F7F-7....
+Ab=""".F----7F7F7F7F-7....
 .|F--7||||||||FJ....
 .||.FJ||||||||L7....
 FJL7L7LJLJ||LJ.L-7..
@@ -171,6 +171,18 @@ L--J.L7...LJS7F-7L7.
 .....|FJLJ|FJ|F7|.LJ
 ....FJL-7.||.||||...
 ....L---J.LJ.LJLJ..."""
+
+Ab="""\
+FF7FSF7F7F7F7F7F---7
+L|LJ||||||||||||F--J
+FL-7LJLJ||||||LJL-77
+F--JF--7||LJLJ7F7FJ-
+L---JF-JLJ.||-FJLJJ7
+|F|F-JF---7F7-L7L|7|
+|FFJF7L7F-JF7|JL---7
+7-L-JL7||F7|L7F-7F7|
+L.L7LFJ|||||FJL7||LJ
+L7JLJL-JLJLJL--JLJ.L"""
 
 from enum import Enum
 from dataclasses import dataclass, field
@@ -194,6 +206,9 @@ for i, line in enumerate(A.splitlines()):
 class Field:
     data: list[list[str]] 
     start: tuple[int, int] 
+    
+    def __repr__(self):
+        return "\n".join(["".join(l) for l in self.data])
     
     def __getitem__(self, pos):
         if isinstance(pos, int):
@@ -223,16 +238,27 @@ class Field:
 
 @dataclass 
 class Path:
-    path1: list[tuple[int, int]] = field(default_factory=list)
-    path2: list[tuple[int, int]] = field(default_factory=list)
+    path1: list[tuple[tuple[int, int], str]] = field(default_factory=list)
+    path2: list[tuple[tuple[int, int], str]] = field(default_factory=list)
 
+    def __contains__(self, k):
+        p1=[p for p, v in self.path1]
+        p2=[p for p, v in self.path2]
+        
+        return k in p1 or k in p2
+        
 
 def start_type(F):
     t, l, b, r = f.neighbors(f.start)
-    top= t[0] in (Pipe.ns.value, Pipe.se.value, Pipe.sw.value)
-    bottom=b[0] in (Pipe.ns.value, Pipe.ne.value, Pipe.nw.value)
-    left=l[0] in (Pipe.we.value, Pipe.ne.value, Pipe.se.value)
-    right=r[0] in (Pipe.nw.value, Pipe.sw.value, Pipe.we.value)
+    top=bottom=right=left=False
+    if t:
+        top= t[0] in (Pipe.ns.value, Pipe.se.value, Pipe.sw.value)
+    if b:
+        bottom=b[0] in (Pipe.ns.value, Pipe.ne.value, Pipe.nw.value)
+    if l:
+        left=l[0] in (Pipe.we.value, Pipe.ne.value, Pipe.se.value)
+    if r:
+        right=r[0] in (Pipe.nw.value, Pipe.sw.value, Pipe.we.value)
    
     if top and bottom:
         return Pipe.ns
@@ -277,17 +303,43 @@ def traverse_path(f):
     p2, p1 = next_pos(f, f.start, typ=st) 
     while True:
         if p1 == p2:
+            path.path1.append((p1, f[p1]))
+            path.path2.append((p2, f[p2]))
             break
         path.path1.append((p1, f[p1])) 
         path.path2.append((p2, f[p2])) 
-        a, b =next_pos(f, p1)
+        a, b = next_pos(f, p1)
         p1 = a if b==path.path1[-2][0] else b
-        c, d =next_pos(f, p2)
+        c, d = next_pos(f, p2)
         p2 = c if d==path.path2[-2][0] else d
     return path
+   
+def count_area(f, P):
+    for i, line in enumerate(f.data):
+        for j, e in enumerate(line):
+            if (j, i) not in P:
+                f[(j, i)] = '.'
 
+    n=0
+    for i, line in enumerate(f.data):
+        open=False
+        prev=None 
+        for j, e in enumerate(line):
+            match e:
+                case '|' | 'J' | '7' :
+                    if (prev, e) not in (('L', 'J'), ('F', '7')):
+                        open=not open
+                    prev=e
+                case 'F' | 'L':
+                    prev=e
+                case '.':
+                    if open:
+                        n+=1
+                    else:
+                        f[(j, i)]='C'
+    return n
 
-f=Field(list(map(list, A.splitlines())), start)
+f=Field(list(map(list, A.splitlines())), start)    
 P=traverse_path(f)
-print("solution part 1:", len(P.path1),
-      len(P.path2))
+print("solution part 1:", len(P.path1), len(P.path2))
+print("solution part 2:", count_area(f, P))
