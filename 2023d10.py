@@ -226,7 +226,6 @@ class Path:
     path1: list[tuple[int, int]] = field(default_factory=list)
     path2: list[tuple[int, int]] = field(default_factory=list)
 
-f=Field(list(map(list, A.splitlines())) , start)
 
 def start_type(F):
     t, l, b, r = f.neighbors(f.start)
@@ -286,6 +285,9 @@ def traverse_path(f):
         c, d =next_pos(f, p2)
         p2 = c if d==path.path2[-2][0] else d
     return path
-   
+
+
+f=Field(list(map(list, A.splitlines())), start)
 P=traverse_path(f)
-print("solution part 1:", len(P.path1), len(P.path2))
+print("solution part 1:", len(P.path1),
+      len(P.path2))
