@@ -1,38 +1,7 @@
-A="""seeds: 79 14 55 13
+from dataclasses import dataclass
+from typing import Any, Optional
 
-seed-to-soil map:
-50 98 2
-52 50 48
-
-soil-to-fertilizer map:
-0 15 37
-37 52 2
-39 0 15
-
-fertilizer-to-water map:
-49 53 8
-0 11 42
-42 0 7
-57 7 4
-
-water-to-light map:
-88 18 7
-18 25 70
-
-light-to-temperature map:
-45 77 23
-81 45 19
-68 64 13
-
-temperature-to-humidity map:
-0 69 1
-1 0 69
-
-humidity-to-location map:
-60 56 37
-56 93 4"""
-
-A="""seeds: 41218238 421491713 1255413673 350530906 944138913 251104806 481818804 233571979 2906248740 266447632 3454130719 50644329 1920342932 127779721 2109326496 538709762 3579244700 267233350 4173137165 60179884
+A = """seeds: 41218238 421491713 1255413673 350530906 944138913 251104806 481818804 233571979 2906248740 266447632 3454130719 50644329 1920342932 127779721 2109326496 538709762 3579244700 267233350 4173137165 60179884
 
 seed-to-soil map:
 1389477588 1222450723 86190269
@@ -268,32 +237,223 @@ humidity-to-location map:
 3165201791 3598194654 44989888
 3689265936 374723007 5790355
 3681279745 3212002432 7986191
-1542227407 1156260177 112739686""" 
+1542227407 1156260177 112739686"""
 
+Ab = """seeds: 79 14 55 13
 
-from collections import defaultdict 
+seed-to-soil map:
+50 98 2
+52 50 48
+
+soil-to-fertilizer map:
+0 15 37
+37 52 2
+39 0 15
+
+fertilizer-to-water map:
+49 53 8
+0 11 42
+42 0 7
+57 7 4
+
+water-to-light map:
+88 18 7
+18 25 70
+
+light-to-temperature map:
+45 77 23
+81 45 19
+68 64 13
+
+temperature-to-humidity map:
+0 69 1
+1 0 69
+
+humidity-to-location map:
+60 56 37
+56 93 4"""
 
 S, *R = A.split('\n\n')
+
 _, seeds = S.split(': ')
 seeds = list(map(int, seeds.split()))
 
-maps = defaultdict(dict)
+
+def find_locs(order, maps, value: int) -> int:
+    for mapping in order:
+        value = maps[mapping][value]
+    return value
+
+def gen_ranges(seeds):
+    it = iter(seeds)
+    try:
+        while it:
+            start = next(it)
+            length = next(it)
+            yield start, length
+    except:
+        pass
+
+def count_ranges(seeds):
+    i = 0
+    for _, length in gen_ranges(seeds):
+        i += length
+    
+    return i
+
+
+@dataclass
+class Range:
+    src: int
+    dst: int
+    length: int
+
+    def __gt__(self, other):
+        return self.dst < other.dst
+
+    def __contains__(self, item):
+        return self.src <= item <= self.src + self.length
+
+    def __getitem__(self, item):
+        return self.dst + (item - self.src)
+
+
+@dataclass
+class Map:
+    ranges: list[Range]
+
+    def __getitem__(self, key: int) -> int:
+        for _range in self.ranges:
+            if key in _range:
+                return _range[key]
+        return key
+
+
+
+maps = {}
+order = []
 
 for r in R:
     N, *L = r.splitlines()
-    for l in L:
-        dst, src, length = map(int, l.split()) 
-        for i in range(length):
-            maps[N.split()[0]][src+i] = dst+i
-            
-#print(dict(maps)) 
-locs=[]
-for seed in seeds:
-    print(seed, maps['seed-to-soil'].setdefault(seed, seed))
-    value=seed
-    for mapping in list(maps.keys()):
-        value = maps[mapping].setdefault(value, value)
-    print(f"{seed=}, location={value}")
-    locs.append(value)
-   
-print(min(locs))
+    m = Map([Range(src, dst, length) for dst, src, length in map(lambda x: map(int, x.split()), L)])
+    # print(N, len(m.ranges))
+    maps[N.split()[0]] = m
+    order.append(N.split()[0])
+
+print(f"Answer 1: {min([find_locs(order, maps, seed) for seed in seeds])}")
+
+
+
+
+@dataclass(frozen=True)
+class Range2:
+    start: int
+    end: int
+
+    @classmethod
+    def from_tuple(cls, tpl: tuple[int, int]) -> "Range2":
+        return Range2(tpl[0], tpl[0] + tpl[1] - 1)
+
+    def __repr__(self) -> str:
+        return f"{self.start}-{self.end}"
+
+    def __contains__(self, key: int) -> bool:
+        return self.start <= key <= self.end
+
+    def __gt__(self, other) -> bool:
+        return self.start > other.start
+
+    def split(self, other: "Range2") -> tuple[Optional["Range2"], Optional["Range2"], Optional["Range2"]]:
+        if other.end < self.start:
+            return None, None, self
+
+        if other.start > self.end:
+            return self, None, None
+
+        if other.start <= self.start and other.end >= self.end:
+            return None, self, None
+
+        if self.start < other.start and self.end > other.end:
+            return Range2(self.start, other.start-1), Range2(other.start, other.end), Range2(other.end+1, self.end)
+
+        if self.start < other.start and other.start <= self.end <= other.end:
+            return Range2(self.start, other.start-1), Range2(other.start, self.end), None
+
+        return None, Range2(self.start, other.end), Range2(other.end+1, self.end)
+
+
+@dataclass
+class MultiMap:
+    mapping: dict[Range2, Range2]
+
+    def __post_init__(self) -> None:
+        self.sorted_mapping = {}
+        for key in sorted(self.mapping.keys()):
+            self.sorted_mapping[key] = self.mapping[key]
+
+    def __getitem__(self, key: Any) -> list[Range] | int:
+        if isinstance(key, int):
+            for k, v in self.sorted_mapping.items():
+                if key in k:
+                    return key - k.start + v.start
+            return key
+
+        out = []
+        for k, _ in self.sorted_mapping.items():
+            if key is None:
+                break
+            left, mid, right = key.split(k)
+            if left is not None:
+                out.append(left)
+            if mid is not None:
+                out.append(mid)
+            key = right
+
+        if key is not None:
+            out.append(key)
+
+        return [Range2(self[r.start], self[r.end]) for r in out]  # type: ignore
+
+
+def iter2(iterable):
+    it = iter(iterable)
+    try:
+        while True:
+            a = next(it)
+            b = next(it)
+            yield a, b
+    except StopIteration:
+        pass
+
+
+seeds, *map_defs = A.split('\n\n')
+
+seeds = [Range2.from_tuple((a, b)) for a, b in iter2(map(int, seeds.split(': ')[1].split()))]
+
+maps = {}
+order = []
+for map_def in map_defs:
+    name, *defs = map_def.splitlines()
+    name = name.split()[0]
+
+    mapping = {}
+    for line in defs:
+        dest, src, length = map(int, line.split())
+        mapping[Range2.from_tuple((src, length))] = Range2.from_tuple((dest, length))
+
+    maps[name] = MultiMap(mapping)
+    order.append(name)
+
+def map_all(maps, order, intervals):
+    new_intervals = []
+    for name in order:
+        new_intervals = []
+        for interval in intervals:
+            new_intervals.extend(maps[name][interval])
+        intervals = new_intervals
+    return new_intervals
+
+new_intervals = sorted(map_all(maps, order, seeds))
+print(f"Answer 2: {new_intervals[0].start}")
+
+
