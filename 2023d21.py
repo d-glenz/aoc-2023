@@ -1,3 +1,12 @@
+def find(field, ch='O'):
+    res = set()
+    for y,line in enumerate(field.splitlines()):
+        for x,el in enumerate(line):
+            if el == ch:
+                res.add((x,y))
+    return res
+
+
 A="""...........
 .....###.#.
 .###.##..#.
@@ -10,16 +19,6 @@ A="""...........
 .##..##.##.
 ..........."""
 
-with open('input21.txt') as f:
-    A = f.read()
-
-def find(field, ch='O'):
-    res = set()
-    for y,line in enumerate(field.splitlines()):
-        for x,el in enumerate(line):
-            if el == ch:
-                res.add((x,y))
-    return res
 
 steps = {
     1: find("""...........
@@ -118,6 +117,9 @@ def parse(A):
         height = y + 1
     return rocks, starting, width, height
 
+
+with open('input21.txt') as f:
+    A = f.read()
 
 rocks, starting, width, height = parse(A)
 res = simulate(64, rocks)  # , test_dict=steps)
